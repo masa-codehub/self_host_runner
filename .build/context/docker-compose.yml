@@ -1,0 +1,23 @@
+services:
+  github_runner:
+    # Dockerfileが存在するカレントディレクトリをビルドコンテキストとして指定
+    build: 
+      context: ./self_host_runner/.build
+      args:
+        RUNNER_VERSION: ${RUNNER_VERSION:-2.328.0}
+        RUNNER_ARCH: ${RUNNER_ARCH:-x64}
+        RUNNER_SUM: ${RUNNER_SUM:-00b2b7849e525d5ad3b3b27b38d3f1c1ac264a2f8b598b9a115b2c78411b0253}
+    # コンテナに名前をつけます（任意）
+    container_name: github-runner
+    # .env ファイルから環境変数を読み込みます
+    environment:
+      - REPO_URL=${REPO_URL:-https://github.com/owner/repo}
+      - RUNNER_TOKEN=${RUNNER_TOKEN:-my_runner_token}
+      - RUNNER_NAME=${RUNNER_NAME:-}
+      - RUNNER_LABELS=${RUNNER_LABELS:-self-hosted,linux,x64,gpu}
+    # コンテナを再起動するポリシー（任意）
+    # always: 常に再起動
+    # unless-stopped: 明示的に停止しない限り再起動
+    ports:
+      - "${RUNNER_PORT:-8080}:${RUNNER_PORT:-8080}"
+    restart: unless-stopped
