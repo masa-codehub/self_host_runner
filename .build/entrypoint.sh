@@ -1,35 +1,33 @@
 #!/bin/bash
 
-# 環境変数が設定されていない場合はエラーで終了
-: "${REPO_URL:?REPO_URL not set}"
+# 環境変数チェック
+# REPO_URLは初回登録時にのみ必要
 : "${RUNNER_TOKEN:?RUNNER_TOKEN not set}"
+: "${REPO_URL:?REPO_URL not set}"
 
-# ランナーの名前（指定がなければホスト名）
+# ランナーの名前やラベル
 RUNNER_NAME=${RUNNER_NAME:-"runner-$(hostname)"}
-# ランナーのラベル（オプション）
 RUNNER_LABELS=${RUNNER_LABELS:-"self-hosted,linux,x64"}
-# ランナーのワーキングディレクトリ（オプション）
-RUNNER_WORKDIR=${RUNNER_WORKDIR:-"_work"}
 
-# クリーンアップ処理: スクリプト終了時にランナーを削除する
+# クリーンアップ処理
 cleanup() {
     echo "Removing runner..."
     ./config.sh remove --token "${RUNNER_TOKEN}"
 }
 
-# SIGINT(Ctrl+C) または SIGTERM を受け取ったときに cleanup 関数を呼び出す
 trap 'cleanup; exit 130' INT
 trap 'cleanup; exit 143' TERM
 
-# GitHub Actions ランナーの設定
-./config.sh --url "${REPO_URL}" \
-            --token "${RUNNER_TOKEN}" \
-            --name "${RUNNER_NAME}" \
-            --labels "${RUNNER_LABELS}" \
-            --work "${RUNNER_WORKDIR}" \
-            --unattended \
-            --replace
+# ⬇️ 認証ファイル(.runner)が存在しない場合のみ、登録処理を実行
+if [ ! -f ".runner" ]; then
+  echo "Runner configuration not found. Configuring..."
+  ./config.sh --url "${REPO_URL}" \
+              --token "${RUNNER_TOKEN}" \
+              --name "${RUNNER_NAME}" \
+              --labels "${RUNNER_LABELS}" \
+              --unattended \
+              --replace
+fi
 
-# ランナーを起動し、バックグラウンドジョブとして実行
-# 'wait $!' を使うことで、シグナルを正しく受け取れるようにする
+# ランナーを起動
 ./run.sh & wait $!

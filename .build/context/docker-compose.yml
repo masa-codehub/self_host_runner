@@ -9,6 +9,8 @@ services:
         RUNNER_SUM: ${RUNNER_SUM:-00b2b7849e525d5ad3b3b27b38d3f1c1ac264a2f8b598b9a115b2c78411b0253}
     # コンテナに名前をつけます（任意）
     container_name: github-runner
+    volumes:
+      - runner_data:/home/docker
     # .env ファイルから環境変数を読み込みます
     environment:
       - REPO_URL=${REPO_URL:-https://github.com/owner/repo}
@@ -21,3 +23,6 @@ services:
     ports:
       - "${RUNNER_PORT:-8080}:${RUNNER_PORT:-8080}"
     restart: unless-stopped
+
+volumes:
+  runner_data:
