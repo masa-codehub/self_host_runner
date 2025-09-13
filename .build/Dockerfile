@@ -1,15 +1,17 @@
-# --- ステージ1: ビルダー ---
-# ランナーのダウンロードと展開を行うための一時的なステージ
-# (修正) latestタグではなく、LTS版の具体的なバージョンを指定
-FROM ubuntu:latest AS builder
+# --- ステージ1: ランナーのダウンロードステージ ---
+FROM ubuntu:latest AS runner-builder
 
 # ビルド引数
 ARG RUNNER_VERSION="2.317.0"
 ARG RUNNER_ARCH="x64"
 ARG RUNNER_SUM="00b2b7849e525d5ad3b3b27b38d3f1c1ac264a2f8b598b9a115b2c78411b0253"
 
-# (修正) SSL証明書パッケージ(ca-certificates)を追加
-RUN apt-get update && apt-get install -y --no-install-recommends curl tar ca-certificates && rm -rf /var/lib/apt/lists/*
+# 必要なパッケージをインストール
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    tar \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # ランナーのダウンロードと検証、展開
 WORKDIR /actions-runner
@@ -19,22 +21,21 @@ RUN curl -o actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz -L http
     && rm ./actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz
 
 
-# --- ステージ2: ファイナル ---
-# 最終的な実行イメージ。軽量なslimイメージをベースにする
-# (修正) latestタグではなく、軽量なslimイメージの具体的なバージョンを指定
-FROM ubuntu:latest
+# --- ステージ2: 最終的な実行イメージ ---
+# PythonとCIに必要なシステムライブラリのみをインストールしたイメージ
+FROM python:3.13-slim
 
-# apt-get実行時にインタラクティブなプロンプトを無効化
 ENV DEBIAN_FRONTEND=noninteractive
 
-# (修正) SSL証明書パッケージ(ca-certificates)を追加
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+# CIで必要とされていたシステムライブラリと、ランナーの動作に必要なツールをインストール
+RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         jq \
         sudo \
         libicu74 \
         ca-certificates \
+        libsqlite3-dev \
+        lsb-release \
     && rm -rf /var/lib/apt/lists/*
 
 # ランナー用のユーザー作成
@@ -45,12 +46,12 @@ RUN useradd -m docker \
 USER docker
 WORKDIR /home/docker
 
-# ビルダーステージから展開済みのランナーファイルをコピー
-COPY --from=builder --chown=docker:docker /actions-runner .
+# ステージ1からランナーのファイルをコピー
+COPY --from=runner-builder --chown=docker:docker /actions-runner .
 
-# エントリーポイントスクリプトのコピーと設定
-COPY --chown=docker:docker entrypoint.sh .
+# エントリーポイントスクリプトをコピーして実行権限を付与
+COPY --chown=docker:docker .build/entrypoint.sh .
 RUN chmod u+x entrypoint.sh
 
-# コンテナ起動時に実行するコマンド
+# コンテナ起動時のコマンド
 ENTRYPOINT ["/home/docker/entrypoint.sh"]
