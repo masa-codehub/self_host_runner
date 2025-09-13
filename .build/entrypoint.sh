@@ -1,26 +1,15 @@
 #!/bin/bash
 
-# Fail fast and treat unset variables as errors
-set -euo pipefail
+# 環境変数チェック
+# REPO_URLは初回登録時にのみ必要
+: "${RUNNER_TOKEN:?RUNNER_TOKEN not set}"
+: "${REPO_URL:?REPO_URL not set}"
 
-# 環境変数が設定されていない場合はエラーで終了（カスタムメッセージ）
-if [ -z "${REPO_URL:-}" ]; then
-    echo "ERROR: REPO_URL is not set" >&2
-    exit 1
-fi
-if [ -z "${RUNNER_TOKEN:-}" ]; then
-    echo "ERROR: RUNNER_TOKEN is not set" >&2
-    exit 1
-fi
-
-# ランナーの名前（指定がなければホスト名）
+# ランナーの名前やラベル
 RUNNER_NAME=${RUNNER_NAME:-"runner-$(hostname)"}
-# ランナーのラベル（オプション）
 RUNNER_LABELS=${RUNNER_LABELS:-"self-hosted,linux,x64"}
-# ランナーのワーキングディレクトリ（オプション）
-RUNNER_WORKDIR=${RUNNER_WORKDIR:-"_work"}
 
-# クリーンアップ処理: スクリプト終了時にランナーを削除する（冪等）
+# クリーンアップ処理
 cleanup() {
         echo "Removing runner..."
         if [ -x ./config.sh ]; then
@@ -31,31 +20,19 @@ cleanup() {
         fi
 }
 
-# SIGINT(Ctrl+C) または SIGTERM を受け取ったときに cleanup 関数を呼び出す
 trap 'cleanup; exit 130' INT
 trap 'cleanup; exit 143' TERM
 
-# GitHub Actions ランナーの設定
-if [ ! -x ./config.sh ]; then
-    echo "ERROR: config.sh not found or not executable in $(pwd)" >&2
-    exit 2
+# ⬇️ 認証ファイル(.runner)が存在しない場合のみ、登録処理を実行
+if [ ! -f ".runner" ]; then
+  echo "Runner configuration not found. Configuring..."
+  ./config.sh --url "${REPO_URL}" \
+              --token "${RUNNER_TOKEN}" \
+              --name "${RUNNER_NAME}" \
+              --labels "${RUNNER_LABELS}" \
+              --unattended \
+              --replace
 fi
 
-./config.sh --url "${REPO_URL}" \
-                        --token "${RUNNER_TOKEN}" \
-                        --name "${RUNNER_NAME}" \
-                        --labels "${RUNNER_LABELS}" \
-                        --work "${RUNNER_WORKDIR}" \
-                        --unattended \
-                        --replace
-
-# ランナーを起動し、バックグラウンドジョブとして実行
-# 'wait $!' を使うことで、シグナルを正しく受け取れるようにする
-if [ ! -x ./run.sh ]; then
-    echo "ERROR: run.sh not found or not executable" >&2
-    cleanup
-    exit 3
-fi
-
-./run.sh &
-wait $!
+# ランナーを起動
+./run.sh & wait $!
