@@ -11,8 +11,13 @@ RUNNER_LABELS=${RUNNER_LABELS:-"self-hosted,linux,x64"}
 
 # クリーンアップ処理
 cleanup() {
-    echo "Removing runner..."
-    ./config.sh remove --token "${RUNNER_TOKEN}"
+        echo "Removing runner..."
+        if [ -x ./config.sh ]; then
+                # ignore errors during remove to avoid masking original exit status
+                ./config.sh remove --token "${RUNNER_TOKEN}" || true
+        else
+                echo "Warning: config.sh not found or not executable, skipping remove" >&2
+        fi
 }
 
 trap 'cleanup; exit 130' INT

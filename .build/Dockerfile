@@ -70,7 +70,6 @@ RUN curl -o actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz -L http
 # --- ステージ3: 最終的な実行イメージ ---
 FROM ubuntu:latest
 
-# apt-get実行時にインタラクティブなプロンプトを無効化
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Pythonの実行に必要な "ランタイム" 依存関係と、CI/ランナーに必要なツールのみをインストール
@@ -81,7 +80,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         jq \
         sudo \
-        libicu74 \
+        libicu72 \
         ca-certificates \
         libsqlite3-dev \
         lsb-release \
