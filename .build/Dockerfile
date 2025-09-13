@@ -1,5 +1,5 @@
 # --- ステージ1: ランナーのダウンロードステージ ---
-FROM ubuntu:latest AS runner-builder
+FROM ubuntu:22.04 AS runner-builder
 
 # ビルド引数
 ARG RUNNER_VERSION="2.317.0"
@@ -23,7 +23,7 @@ RUN curl -o actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz -L http
 
 # --- ステージ2: 最終的な実行イメージ ---
 # PythonとCIに必要なシステムライブラリのみをインストールしたイメージ
-FROM python:3.13-slim
+FROM python:3.13.0-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         jq \
         sudo \
-        libicu74 \
+        libicu72 \
         ca-certificates \
         libsqlite3-dev \
         lsb-release \
@@ -50,7 +50,7 @@ WORKDIR /home/docker
 COPY --from=runner-builder --chown=docker:docker /actions-runner .
 
 # エントリーポイントスクリプトをコピーして実行権限を付与
-COPY --chown=docker:docker .build/entrypoint.sh .
+COPY --chown=docker:docker entrypoint.sh .
 RUN chmod u+x entrypoint.sh
 
 # コンテナ起動時のコマンド
