@@ -74,13 +74,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Pythonの実行に必要な "ランタイム" 依存関係と、CI/ランナーに必要なツールのみをインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        # # Pythonの実行時依存
-        # libssl-dev zlib1g libbz2-1.0 libreadline8 libsqlite3-0 libffi8 liblzma5 \
+        # Pythonの実行時依存
+        libssl-dev zlib1g libbz2-1.0 libreadline8 libsqlite3-0 libffi8 liblzma5 \
         # CIとランナー用
         git \
         jq \
         sudo \
-        libicu72 \
+        libicu74 \
         ca-certificates \
         libsqlite3-dev \
         lsb-release \
