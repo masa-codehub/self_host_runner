@@ -1,91 +1,52 @@
 # --- ステージ1: Pythonのビルドステージ ---
-FROM ubuntu:latest AS python-builder
+FROM python:slim AS python-source
 
-# apt-get実行時にインタラクティブなプロンプトを無効化
-ENV DEBIAN_FRONTEND=noninteractive
+# --- ステージ2: Node.js公式イメージ---
+FROM node:slim AS node-source
 
-# Pythonのバージョンを環境変数として定義
-ENV PYTHON_VERSION=3.13.3
-
-# Pythonのビルドに必要な依存関係をインストール
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates \
-    && update-ca-certificates \
-    && apt-get install -y --no-install-recommends \
-        build-essential \
-        libssl-dev \
-        zlib1g-dev \
-        libbz2-dev \
-        libreadline-dev \
-        libsqlite3-dev \
-        wget \
-        curl \
-        llvm \
-        libncurses5-dev \
-        libncursesw5-dev \
-        xz-utils \
-        tk-dev \
-        libffi-dev \
-        liblzma-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Pythonをソースからビルドし、/usr/local/python ディレクトリにインストール
-RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz \
-    && tar -xf Python-${PYTHON_VERSION}.tgz \
-    && cd Python-${PYTHON_VERSION} \
-    && ./configure --enable-optimizations --prefix=/usr/local/python \
-    && make -j $(nproc) \
-    && make install \
-    && /usr/local/python/bin/python3.13 -m ensurepip \
-    && /usr/local/python/bin/python3.13 -m pip install --upgrade pip \
-    && cd .. \
-    && rm -rf Python-${PYTHON_VERSION}*
-
-# --- ステージ2: ランナーのダウンロードステージ ---
+# --- ステージ3: ランナーのダウンロードステージ ---
 FROM ubuntu:latest AS runner-builder
 
 # apt-get実行時にインタラクティブなプロンプトを無効化
 ENV DEBIAN_FRONTEND=noninteractive
-
-# ビルド引数
-ARG RUNNER_VERSION="2.317.0"
-ARG RUNNER_ARCH="x64"
-ARG RUNNER_SUM="00b2b7849e525d5ad3b3b27b38d3f1c1ac264a2f8b598b9a115b2c78411b0253"
 
 # 必要なパッケージをインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     tar \
     ca-certificates \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # ランナーのダウンロードと検証、展開
 WORKDIR /actions-runner
-RUN curl -o actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz -L https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz \
-    && echo "${RUNNER_SUM}  actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz" | sha256sum -c \
-    && tar xzf ./actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz \
-    && rm ./actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz
+# 1. GitHub APIを叩いて最新リリースのJSONを取得
+# 2. jqで "tag_name" (例: "v2.317.0") を抽出
+# 3. sedで先頭の "v" を削除してバージョン番号だけにする (例: "2.317.0")
+# 4. 構築したURLでダウンロードする
+RUN LATEST_VERSION=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | jq -r '.tag_name' | sed 's/^v//') \
+    && echo "Detected latest runner version: ${LATEST_VERSION}" \
+    && RUNNER_ARCH="x64" \
+    && curl -o actions-runner.tar.gz -L "https://github.com/actions/runner/releases/download/v${LATEST_VERSION}/actions-runner-linux-${RUNNER_ARCH}-${LATEST_VERSION}.tar.gz" \
+    && tar xzf ./actions-runner.tar.gz \
+    && rm ./actions-runner.tar.gz
 
-
-# --- ステージ3: 最終的な実行イメージ ---
+# --- ステージ4: 最終的な実行イメージ ---
 FROM ubuntu:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Pythonの実行に必要な "ランタイム" 依存関係と、CI/ランナーに必要なツールのみをインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        # Pythonの実行時依存
         libssl-dev zlib1g libbz2-1.0 libreadline8 libsqlite3-0 libffi8 liblzma5 \
-        # CIとランナー用
         git \
         curl \
         jq \
         sudo \
         gnupg \
-        libicu74 \
         ca-certificates \
-        libsqlite3-dev \
         lsb-release \
+        software-properties-common \
     && rm -rf /var/lib/apt/lists/*
 
 # GitHub CLI の公式リポジトリを登録して最新の gh をインストール
@@ -96,26 +57,47 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
 
-# python-builderステージから、ビルド済みのPythonをコピー
-COPY --from=python-builder /usr/local/python /usr/local/python
+# Google Cloud CLI (gcloud) のインストール
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list \
+    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends google-cloud-cli \
+    && rm -rf /var/lib/apt/lists/*
 
-# python と pip コマンドにパスを通す
-ENV PATH="/usr/local/python/bin:${PATH}"
+# python-sourceステージから、ビルド済みのPythonをコピー
+COPY --from=python-source /usr/local /usr/local
+
+# node-sourceステージから、ビルド済みのnode.jsをコピー
+COPY --from=node-source /usr/local /usr/local
+
+# ライブラリの更新通知とパス設定
+RUN ldconfig
+ENV PATH="/usr/local/bin:${PATH}"
+
+# Gemini CLIのインストール
+RUN npm install -g @google/gemini-cli@preview
 
 # ランナー用のユーザー作成
-RUN useradd -m docker \
-    && usermod -aG sudo docker \
-    && echo "docker ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN useradd -m runner \
+    && usermod -aG sudo runner \
+    && echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-USER docker
-WORKDIR /home/docker
-
+# スクリプト類をコピー
+WORKDIR /home/runner
 # runner-builderステージからランナーのファイルをコピー
-COPY --from=runner-builder --chown=docker:docker /actions-runner .
-
+COPY --from=runner-builder --chown=runner:runner /actions-runner .
 # エントリーポイントスクリプトをコピーして実行権限を付与
-COPY --chown=docker:docker entrypoint.sh .
+COPY --chown=runner:runner entrypoint.sh .
 RUN chmod u+x entrypoint.sh
 
-# コンテナ起動時のコマンド
-ENTRYPOINT ["/home/docker/entrypoint.sh"]
+# 公式スクリプトを使って依存関係をインストール
+# これにより、Ubuntuのバージョンに合わせて適切なライブラリ(libicuなど)が入る
+RUN sudo ./bin/installdependencies.sh
+
+USER runner
+
+ENTRYPOINT ["/home/runner/entrypoint.sh"]
+
+# Memo : Gemini CLI Authentication
+# docker exec -it <コンテナ名> bash
+# gcloud auth application-default login --no-browser

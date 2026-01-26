@@ -3,8 +3,6 @@
     "service": "service-name",
     "workspaceFolder": "/app",
     "dockerComposeFile": "../docker-compose.yml",
-    // "postStartCommand": "pip install -r .build/repositories.txt && pip install -e .",
-    // "updateContentCommand": "bash ./.build/setup_gemini_auth.sh",
     "customizations": {
         "vscode": {
             "settings": {
