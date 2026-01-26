@@ -1,5 +1,6 @@
 services:
   github_runner:
+    image: self_host_runner
     # Dockerfileが存在するカレントディレクトリをビルドコンテキストとして指定
     build: 
       context: ./self_host_runner
@@ -16,6 +17,8 @@ services:
     # always: 常に再起動
     # unless-stopped: 明示的に停止しない限り再起動
     restart: unless-stopped
+    # stdin_open: true
+    # tty: true
 
 volumes:
   gemini_auth:

@@ -39,6 +39,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Pythonの実行に必要な "ランタイム" 依存関係と、CI/ランナーに必要なツールのみをインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libssl-dev zlib1g libbz2-1.0 libreadline8 libsqlite3-0 libffi8 liblzma5 \
+        libatomic1 \
         git \
         curl \
         jq \
@@ -88,7 +89,7 @@ WORKDIR /home/runner
 COPY --from=runner-builder --chown=runner:runner /actions-runner .
 # エントリーポイントスクリプトをコピーして実行権限を付与
 COPY --chown=runner:runner .build/entrypoint.sh .
-RUN chmod u+x .build/entrypoint.sh
+RUN chmod u+x entrypoint.sh
 
 # 公式スクリプトを使って依存関係をインストール
 # これにより、Ubuntuのバージョンに合わせて適切なライブラリ(libicuなど)が入る

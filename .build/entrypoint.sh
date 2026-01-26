@@ -3,6 +3,11 @@
 # エラー時にスクリプトを停止（安全のため）
 set -e
 
+# ボリュームマウントされたディレクトリの権限を強制的にrunnerにする
+# (パスワードなしsudoが許可されているので実行可能)
+echo "Fixing permissions for .gemini..."
+sudo chown -R runner:runner /home/runner/.gemini || true
+
 # 環境変数チェック
 # REPO_URLは初回登録時にのみ必要
 : "${RUNNER_TOKEN:?RUNNER_TOKEN not set}"
