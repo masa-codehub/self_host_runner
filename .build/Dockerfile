@@ -87,8 +87,8 @@ WORKDIR /home/runner
 # runner-builderステージからランナーのファイルをコピー
 COPY --from=runner-builder --chown=runner:runner /actions-runner .
 # エントリーポイントスクリプトをコピーして実行権限を付与
-COPY --chown=runner:runner entrypoint.sh .
-RUN chmod u+x entrypoint.sh
+COPY --chown=runner:runner .build/entrypoint.sh .
+RUN chmod u+x .build/entrypoint.sh
 
 # 公式スクリプトを使って依存関係をインストール
 # これにより、Ubuntuのバージョンに合わせて適切なライブラリ(libicuなど)が入る
