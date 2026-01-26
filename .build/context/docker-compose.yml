@@ -4,22 +4,21 @@ services:
     build: 
       context: ./self_host_runner
       dockerfile: .build/Dockerfile
-    # コンテナに名前をつけます（任意）
-    container_name: github-runner
     volumes:
-      - runner_data:/home/docker
+      - runner_vol_x:/home/runner
+      # - gemini_auth:${ROOT:-/root}/.gemini
+      - gemini_auth:/home/runner/.config/gcloud
     # .env ファイルから環境変数を読み込みます
-    environment:
-      - REPO_URL=${REPO_URL:-https://github.com/owner/repo}
-      - RUNNER_TOKEN=${RUNNER_TOKEN:-my_runner_token}
-      - RUNNER_NAME=${RUNNER_NAME:-}
-      - RUNNER_LABELS=${RUNNER_LABELS:-self-hosted,linux,x64,gpu}
-    ports:
-      - "${RUNNER_PORT:-8080}:${RUNNER_PORT:-8080}"
+    env_file:
+      - .env
+      - .env.runner_x
     # コンテナを再起動するポリシー（任意）
     # always: 常に再起動
     # unless-stopped: 明示的に停止しない限り再起動
     restart: unless-stopped
 
 volumes:
-  runner_data:
+  gemini_auth:
+    name: shared_gemini_auth
+  runner_vol_x:
+  
