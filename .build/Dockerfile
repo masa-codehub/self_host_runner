@@ -77,6 +77,7 @@ ENV PATH="/usr/local/bin:${PATH}"
 
 # Gemini CLIのインストール
 RUN npm install -g @google/gemini-cli@preview
+RUN gemini extensions install https://github.com/github/github-mcp-server --consent
 
 # ランナー用のユーザー作成
 RUN useradd -m runner \
