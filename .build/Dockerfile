@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         libssl-dev \
         zlib1g-dev \
-        awk \
+        gawk \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Python のインストール (PPA から最新バージョンを動的に検出してインストール)
