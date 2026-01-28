@@ -31,6 +31,9 @@ if [ ! -f ".runner" ]; then
               --replace
 fi
 
+# Gemini 拡張機能を runner ユーザーのホームディレクトリにインストール
+gemini extensions install https://github.com/github/github-mcp-server --consent
+
 # ランナーを起動
 echo "Starting runner..."
 exec ./run.sh

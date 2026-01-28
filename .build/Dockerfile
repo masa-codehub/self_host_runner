@@ -80,7 +80,4 @@ RUN chmod u+x entrypoint.sh && sudo ./bin/installdependencies.sh
 # 実行ユーザーに切り替えてから拡張機能をインストール
 USER runner
 
-# Gemini 拡張機能を runner ユーザーのホームディレクトリにインストール
-RUN gemini extensions install https://github.com/github/github-mcp-server --consent
-
 ENTRYPOINT ["/home/runner/entrypoint.sh"]
