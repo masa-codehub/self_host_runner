@@ -36,7 +36,8 @@ RUN add-apt-repository ppa:deadsnakes/ppa -y && apt-get update \
         python3-venv \
     && rm -rf /var/lib/apt/lists/* \
     # python3 コマンドを python としても使えるようにする
-    && update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
+    && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
 # 4. Node.js のインストール (NodeSource Current)
 RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - \
