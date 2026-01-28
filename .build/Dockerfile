@@ -34,6 +34,7 @@ RUN add-apt-repository ppa:deadsnakes/ppa -y && apt-get update \
         python3 \
         python3-dev \
         python3-venv \
+        python3-pip \
     && rm -rf /var/lib/apt/lists/* \
     # python3 コマンドを python としても使えるようにする
     && update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
