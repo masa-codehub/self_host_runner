@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# エラー時にスクリプトを停止（安全のため）
-set -e
-
 # ボリュームマウントされたディレクトリの権限を強制的にrunnerにする
 # (パスワードなしsudoが許可されているので実行可能)
 echo "Fixing permissions for .gemini..."
@@ -30,9 +27,6 @@ if [ ! -f ".runner" ]; then
               --unattended \
               --replace
 fi
-
-# Gemini 拡張機能を runner ユーザーのホームディレクトリにインストール
-gemini extensions install https://github.com/github/github-mcp-server --consent
 
 # ランナーを起動
 echo "Starting runner..."
