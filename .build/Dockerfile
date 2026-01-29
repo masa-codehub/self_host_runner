@@ -1,5 +1,5 @@
-# 1. ベースイメージ: 公式Pythonの最新軽量版 (python:slim)
-FROM python:slim
+# 1. ベースイメージ: ubuntu:latest
+FROM ubuntu:latest
 
 # ★ uv のインストール
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -9,11 +9,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# 2. 必須ツールと依存関係のインストール (徹底的に削減)
-# - wget -> curlで代用するため削除
-# - tmux -> 自動化には不要なので削除
-# - gawk -> 標準のawkで足りるため削除
-# - build-essential -> コンパイルしないなら不要なので削除
+# 2. 必須ツールと依存関係のインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
@@ -38,30 +34,21 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
     && rm -rf /var/lib/apt/lists/*    && apt-get update && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-# 4. Google Cloud CLI のインストール
-RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | \
-    tee -a /etc/apt/sources.list.d/google-cloud-sdk.list \
-    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
-    gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends google-cloud-cli \
-    && rm -rf /var/lib/apt/lists/*
-
-# 5. Node.js のインストールと npm のアップデート
+# 4. Node.js のインストールと npm のアップデート
 RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g npm@latest \
     && rm -rf /var/lib/apt/lists/*
 
-# 6. Gemini CLI のインストール (preview指定)
+# 5. Gemini CLI のインストール (preview指定)
 RUN npm install -g @google/gemini-cli@preview
 
-# 7. ランナー用のユーザー作成
+# 6. ランナー用のユーザー作成
 RUN useradd -m runner \
     && usermod -aG sudo runner \
     && echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# 8. GitHub Actions Runner のダウンロードと展開
+# 7. GitHub Actions Runner のダウンロードと展開
 WORKDIR /home/runner
 RUN LATEST_VERSION=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | jq -r '.tag_name' | sed 's/^v//') \
     && curl -o actions-runner.tar.gz -L "https://github.com/actions/runner/releases/download/v${LATEST_VERSION}/actions-runner-linux-x64-${LATEST_VERSION}.tar.gz" \
@@ -69,7 +56,7 @@ RUN LATEST_VERSION=$(curl -s https://api.github.com/repos/actions/runner/release
     && rm actions-runner.tar.gz \
     && chown -R runner:runner /home/runner
 
-# 9. スクリプト類をコピーして権限設定
+# 8. スクリプト類をコピーして権限設定
 COPY --chown=runner:runner .build/entrypoint.sh .
 RUN chmod u+x entrypoint.sh && sudo ./bin/installdependencies.sh
 
