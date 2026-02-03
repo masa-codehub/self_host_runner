@@ -36,4 +36,4 @@ gemini extensions install https://github.com/github/github-mcp-server --consent
 
 # ランナーを起動
 echo "Starting runner..."
-exec ./run.sh
+# exec ./run.sh
