@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
     tar \
     zlib1g-dev \
+    rsync \
     && rm -rf /var/lib/apt/lists/*
 
 # 3. GitHub CLI のインストール (wgetを使わずcurlで実行)
