@@ -53,9 +53,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - \
     && npm install -g npm@latest \
     && rm -rf /var/lib/apt/lists/*
 
-# 7. Gemini CLI のインストール (preview指定)
-RUN npm install -g @google/gemini-cli@preview
-
 # # 8. キャッシュディレクトリの確保
 # ENV UV_CACHE_DIR=/root/.cache/uv
 
